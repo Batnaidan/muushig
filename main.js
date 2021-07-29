@@ -4,10 +4,25 @@ let game,
   selectedCards = [], // Player's selected cards
   me = {}, //
   shuffledCards = null,
-  stage = 'ready';
+  stage = 'ready',
+  context = null;
 const responseTime = 15;
-const imagebase64encoded = `iVBORw0KGgoAAAANSUhEUgAABHQAAAM0CAIAAABVkeIDAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAABFXSURBVHhe7dcxEQAgDAAxhHTEvzM8IKI/5i4mct5cAAAAluQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAAjIFQAAQECuAAAAAnIFAAAQkCsAAICAXAEAAATkCgAAICBXAAAAAbkCAAAIyBUAAEBArgAAAAJyBQAAEJArAACAgFwBAAAE5AoAACAgVwAAAAG5AgAACMgVAABAQK4AAAACcgUAABCQKwAAgIBcAQAABOQKAAAgIFcAAAABuQIAAFib+wEfe2vrUCDtbgAAAABJRU5ErkJggg==`;
 FBInstant.initializeAsync().then(function () {
+  let entryData = FBInstant.getEntryPointData();
+  if (entryData) {
+    console.log(entryData);
+    FBInstant.context.switchAsync(entryData.context).then(() => {
+      console.log(FBInstant.context.getType());
+      console.log(FBInstant.context.getID());
+      FBInstant.context.getPlayersAsync().then((playerinfo) => {
+        console.log(playerinfo);
+      });
+    });
+  } else {
+    console.log(FBInstant.context.getType());
+    console.log(FBInstant.context.getID());
+  }
+
   this.socket = io('http://localhost:3000', {
     query: {
       uuid: FBInstant.player.getID(),
@@ -64,45 +79,61 @@ FBInstant.initializeAsync().then(function () {
       );
 
       for (let i = 7; i <= 14; i++) {
-        this.load.image(`${i}C`, `/assets/${i}C.png`);
-        this.load.image(`${i}D`, `/assets/${i}D.png`);
-        this.load.image(`${i}H`, `/assets/${i}H.png`);
-        this.load.image(`${i}S`, `/assets/${i}S.png`);
+        this.load.image(`${i}C`, `./assets/${i}C.png`);
+        this.load.image(`${i}D`, `./assets/${i}D.png`);
+        this.load.image(`${i}H`, `./assets/${i}H.png`);
+        this.load.image(`${i}S`, `./assets/${i}S.png`);
       }
-      this.load.image('backside', '/assets/backside.jpg');
-      this.load.image('table', '/assets/table.jpg');
-      this.load.image('drop', '/assets/drop.png');
-      this.load.image('dealerchange', '/assets/dealerchange.png');
-      this.load.image('in', '/assets/in.png');
-      this.load.image('change', '/assets/change.png');
-      this.load.image('put', '/assets/put.png');
+      this.load.image('backside', './assets/backside.jpg');
+      this.load.image('table', './assets/table.jpg');
+      this.load.image('drop', './assets/drop.png');
+      this.load.image('dealerchange', './assets/dealerchange.png');
+      this.load.image('in', './assets/in.png');
+      this.load.image('change', './assets/change.png');
+      this.load.image('put', './assets/put.png');
       this.load.image('playerPhoto', FBInstant.player.getPhoto());
     }
 
     function create() {
-      this.add.image(300, 300, 'playerPhoto').setScale(0.25);
       this.add.image(0, 0, 'table').setOrigin(0, 0).setScale(0.4);
       var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
+
+      this.add.image(300, 300, 'playerPhoto').setScale(0.25);
       const inviteFriendsButton = this.add
         .text(200, 200, 'invite friends', { fill: '#fff' })
         .setInteractive();
+
       inviteFriendsButton.on('pointerdown', () => {
+        // FBInstant.context
+        //   .createAsync(FBInstant.player.getID())
+        //   .then(() => {
+        //     console.log(FBInstant.context.getID());
+        //   })
+        //   .catch((err) => {
+        //     console.error(err);
+        //   });
         FBInstant.context
           .chooseAsync({
             filters: ['NEW_PLAYERS_ONLY'],
             minSize: 3,
           })
           .then(function () {
+            if (!context) {
+              context = FBInstant.context.getID();
+            }
             let contextPlayers = FBInstant.context
               .getPlayersAsync()
               .then((playersInfo) => {
-                console.log(imagebase64encoded);
                 FBInstant.updateAsync({
                   action: 'CUSTOM',
-                  template: 'play_turn',
+                  template: 'join_game',
                   cta: 'Join',
-                  text: `Test user just played muushig. Come join in game!`,
-                  // image: imagebase64encoded,
+                  text: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+                  image: contextBase64InviteImage,
+                  data: {
+                    context: context,
+                    invite: true,
+                  },
                 })
                   .then(function () {
                     console.log('Message was sent successfully');
@@ -113,6 +144,7 @@ FBInstant.initializeAsync().then(function () {
                 console.log(playersInfo);
               });
           });
+
         // var connectedPlayers = FBInstant.player
         //   .getConnectedPlayersAsync()
         //   .then(function (players) {
@@ -135,6 +167,7 @@ FBInstant.initializeAsync().then(function () {
         // });
         // FBInstant.checkCanPlayerMatchAsync().then((canMatch) => {
         //   if (canMatch) {
+        //     console.log(canMatch);
         //     FBInstant.matchPlayerAsync(null, true).then(() => {
         //       console.log(FBInstant.context.getID());
         //     });
@@ -169,8 +202,8 @@ FBInstant.initializeAsync().then(function () {
         let key = gameObject.texture.key;
         if (!key) return;
         console.log(key);
-        let index = selectedCards.indexOf(gameObject.texture.key);
 
+        let index = selectedCards.indexOf(gameObject.texture.key);
         if (index !== -1) {
           selectedCards.splice(index, 1);
           postFxPlugin.remove(gameObject);
@@ -180,12 +213,14 @@ FBInstant.initializeAsync().then(function () {
           skipCount = 0;
           dropButton.setVisible(false);
           inButton.setVisible(false);
+          changeButton.setVisible(true);
           stage = 'change';
         } else if (key === 'drop') {
           //send to server that player is in and increment skipCount to 0
           dropButton.setVisible(false);
           inButton.setVisible(false);
           stage = 'change';
+          changeButton.setVisible(true);
         } else if (key === 'change') {
           //send to server that player will change
         } else if (key === 'dealerchange') {

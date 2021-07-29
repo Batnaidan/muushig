@@ -7,8 +7,8 @@
       "pass_score": {
         "example": "Kun just scored 100 and passed Alissa's highscore!"
       },
-      "play_turn": {
-        "example": "Kun just played HELLO. Now it's Alissa's turn!"
+      "join_game": {
+        "example": "Will just played muushig. Come join in game"
       }
     }
   }
