@@ -5,44 +5,44 @@ let game,
   me = {}, //
   shuffledCards = null,
   stage = 'ready',
-  context = null;
+  context = null,
+  socket;
+
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
-  let entryData = FBInstant.getEntryPointData();
-  if (entryData) {
-    console.log(entryData);
-    FBInstant.context.switchAsync(entryData.context).then(() => {
-      console.log(FBInstant.context.getType());
-      console.log(FBInstant.context.getID());
-      FBInstant.context.getPlayersAsync().then((playerinfo) => {
-        console.log(playerinfo);
-      });
-    });
-  } else {
-    console.log(FBInstant.context.getType());
-    console.log(FBInstant.context.getID());
-  }
-
-  this.socket = io('http://localhost:3000', {
+  me = {
+    uuid: FBInstant.player.getID(),
+    name: FBInstant.player.getName(),
+    photo: FBInstant.player.getPhoto(),
+    ready: false,
+    isTurn: false,
+  };
+  socket = io('http://localhost:3000', {
     query: {
       uuid: FBInstant.player.getID(),
       name: FBInstant.player.getName(),
       photo: FBInstant.player.getPhoto(),
-      ready: false,
-      isTurn: false,
     },
   });
-  this.socket.on('connect', function () {
+  socket.on('connect', function () {
     console.log('Connected!');
   });
-  this.socket.on('connectToRoom');
-  this.socket.on('deck', (deck) => {
+  socket.on('roomId', function (data) {
+    // console.log(data);
+    console.log('Room', data._id + '\n' + JSON.stringify(data.room_players));
+  });
+  let entryData = FBInstant.getEntryPointData();
+  if (entryData) {
+    console.log(entryData);
+    socket.emit('joinRoom', entryData);
+  }
+  socket.on('deck', (deck) => {
     shuffledCards = deck;
     for (let i = 0; i < 5; i++) {
       playerCards.push({
-        uuid: i,
-        name: null,
-        photo: null,
+        uuid: FBInstant.player.getID(),
+        name: FBInstant.player.getName(),
+        photo: FBInstant.player.getPhoto(),
         skipCount: 0,
         cards: [
           shuffledCards.shift(),
@@ -104,46 +104,47 @@ FBInstant.initializeAsync().then(function () {
         .setInteractive();
 
       inviteFriendsButton.on('pointerdown', () => {
+        me.count = 1;
+        socket.emit('findRoom', me);
         // FBInstant.context
-        //   .createAsync(FBInstant.player.getID())
-        //   .then(() => {
-        //     console.log(FBInstant.context.getID());
+        //   .chooseAsync({
+        //     filters: ['NEW_PLAYERS_ONLY'],
+        //     minSize: 3,
         //   })
-        //   .catch((err) => {
-        //     console.error(err);
+        //   .then(function () {
+        //     if (!context) {
+        //       context = FBInstant.context.getID();
+        //     }
+        //     let contextPlayers = FBInstant.context
+        //       .getPlayersAsync()
+        //       .then((playersInfo) => {
+        //         FBInstant.updateAsync({
+        //           action: 'CUSTOM',
+        //           template: 'join_game',
+        //           cta: 'Join',
+        //           text: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+        //           text: {
+        //             default: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+        //             localizations: {
+        //               mn_MN: `${FBInstant.player.getName()} хэрэглэгч таныг тоглоомонд урилаа. Орж тоглоомонд нэгдээрэй!`,
+        //               en_US: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+        //             },
+        //           },
+        //           image: contextBase64InviteImage,
+        //           data: {
+        //             context: context,
+        //             invite: true,
+        //           },
+        //         })
+        //           .then(function () {
+        //             console.log('Message was sent successfully');
+        //           })
+        //           .catch((err) => {
+        //             console.error(err);
+        //           });
+        //         console.log(playersInfo);
+        //       });
         //   });
-        FBInstant.context
-          .chooseAsync({
-            filters: ['NEW_PLAYERS_ONLY'],
-            minSize: 3,
-          })
-          .then(function () {
-            if (!context) {
-              context = FBInstant.context.getID();
-            }
-            let contextPlayers = FBInstant.context
-              .getPlayersAsync()
-              .then((playersInfo) => {
-                FBInstant.updateAsync({
-                  action: 'CUSTOM',
-                  template: 'join_game',
-                  cta: 'Join',
-                  text: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
-                  image: contextBase64InviteImage,
-                  data: {
-                    context: context,
-                    invite: true,
-                  },
-                })
-                  .then(function () {
-                    console.log('Message was sent successfully');
-                  })
-                  .catch((err) => {
-                    console.error(err);
-                  });
-                console.log(playersInfo);
-              });
-          });
 
         // var connectedPlayers = FBInstant.player
         //   .getConnectedPlayersAsync()
