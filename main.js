@@ -37,22 +37,7 @@ FBInstant.initializeAsync().then(function () {
     socket.emit('joinRoom', entryData);
   }
   socket.on('deck', (deck) => {
-    shuffledCards = deck;
-    for (let i = 0; i < 5; i++) {
-      playerCards.push({
-        uuid: FBInstant.player.getID(),
-        name: FBInstant.player.getName(),
-        photo: FBInstant.player.getPhoto(),
-        skipCount: 0,
-        cards: [
-          shuffledCards.shift(),
-          shuffledCards.shift(),
-          shuffledCards.shift(),
-          shuffledCards.shift(),
-          shuffledCards.shift(),
-        ],
-      });
-    }
+    console.log(deck);
   });
 
   FBInstant.setLoadingProgress(100);
@@ -99,11 +84,16 @@ FBInstant.initializeAsync().then(function () {
       var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
 
       this.add.image(300, 300, 'playerPhoto').setScale(0.25);
-      const inviteFriendsButton = this.add
-        .text(200, 200, 'invite friends', { fill: '#fff' })
+      const createLobbyButton = this.add
+        .text(200, 200, 'CREATE LOBBY', { fill: '#fff' })
         .setInteractive();
-
-      inviteFriendsButton.on('pointerdown', () => {
+      const readyButton = this.add
+        .text(200, 300, 'READY', { fill: '#fff' })
+        .setInteractive();
+      readyButton.on('pointerdown', () => {
+        socket.emit('playerStateChange', true);
+      });
+      createLobbyButton.on('pointerdown', () => {
         me.count = 1;
         socket.emit('findRoom', me);
         // FBInstant.context
