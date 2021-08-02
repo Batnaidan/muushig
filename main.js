@@ -5,7 +5,7 @@ let game,
   me = {}, //
   shuffledCards = null,
   stage = 'ready',
-  context = null,
+  inviteData = {},
   socket;
 
 const responseTime = 15;
@@ -16,6 +16,8 @@ FBInstant.initializeAsync().then(function () {
     photo: FBInstant.player.getPhoto(),
     ready: false,
     isTurn: false,
+    cards: [],
+    skipCount: 0,
   };
   socket = io('http://localhost:3000', {
     query: {
@@ -28,8 +30,11 @@ FBInstant.initializeAsync().then(function () {
     console.log('Connected!');
   });
   socket.on('roomId', function (data) {
-    // console.log(data);
+    inviteData.roomId = data._id;
     console.log('Room', data._id + '\n' + JSON.stringify(data.room_players));
+  });
+  socket.on('playerChange', (room) => {
+    console.log(room);
   });
   let entryData = FBInstant.getEntryPointData();
   if (entryData) {
@@ -38,6 +43,9 @@ FBInstant.initializeAsync().then(function () {
   }
   socket.on('deck', (deck) => {
     console.log(deck);
+  });
+  socket.on('startGame', (room) => {
+    // room.room_players[]
   });
 
   FBInstant.setLoadingProgress(100);
@@ -84,57 +92,18 @@ FBInstant.initializeAsync().then(function () {
       var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
 
       this.add.image(300, 300, 'playerPhoto').setScale(0.25);
-      const createLobbyButton = this.add
-        .text(200, 200, 'CREATE LOBBY', { fill: '#fff' })
-        .setInteractive();
       const readyButton = this.add
         .text(200, 300, 'READY', { fill: '#fff' })
         .setInteractive();
       readyButton.on('pointerdown', () => {
         socket.emit('playerStateChange', true);
       });
+      const createLobbyButton = this.add
+        .text(200, 200, 'CREATE LOBBY', { fill: '#fff' })
+        .setInteractive();
       createLobbyButton.on('pointerdown', () => {
-        me.count = 1;
+        me.count = 2;
         socket.emit('findRoom', me);
-        // FBInstant.context
-        //   .chooseAsync({
-        //     filters: ['NEW_PLAYERS_ONLY'],
-        //     minSize: 3,
-        //   })
-        //   .then(function () {
-        //     if (!context) {
-        //       context = FBInstant.context.getID();
-        //     }
-        //     let contextPlayers = FBInstant.context
-        //       .getPlayersAsync()
-        //       .then((playersInfo) => {
-        //         FBInstant.updateAsync({
-        //           action: 'CUSTOM',
-        //           template: 'join_game',
-        //           cta: 'Join',
-        //           text: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
-        //           text: {
-        //             default: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
-        //             localizations: {
-        //               mn_MN: `${FBInstant.player.getName()} хэрэглэгч таныг тоглоомонд урилаа. Орж тоглоомонд нэгдээрэй!`,
-        //               en_US: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
-        //             },
-        //           },
-        //           image: contextBase64InviteImage,
-        //           data: {
-        //             context: context,
-        //             invite: true,
-        //           },
-        //         })
-        //           .then(function () {
-        //             console.log('Message was sent successfully');
-        //           })
-        //           .catch((err) => {
-        //             console.error(err);
-        //           });
-        //         console.log(playersInfo);
-        //       });
-        //   });
 
         // var connectedPlayers = FBInstant.player
         //   .getConnectedPlayersAsync()
@@ -156,14 +125,42 @@ FBInstant.initializeAsync().then(function () {
         //         9TXL0Y4OHwAAAABJRU5ErkJggg==`,
         //   text: 'hello',
         // });
-        // FBInstant.checkCanPlayerMatchAsync().then((canMatch) => {
-        //   if (canMatch) {
-        //     console.log(canMatch);
-        //     FBInstant.matchPlayerAsync(null, true).then(() => {
-        //       console.log(FBInstant.context.getID());
-        //     });
-        //   }
-        // });
+      });
+      const inviteFriends = this.add
+        .text(200, 400, 'INVITE FRIENDS', { fill: '#fff' })
+        .setInteractive();
+      inviteFriends.on('pointerdown', () => {
+        FBInstant.context
+          .chooseAsync({
+            filters: ['NEW_PLAYERS_ONLY'],
+            minSize: 3,
+          })
+          .then(function () {
+            FBInstant.updateAsync({
+              action: 'CUSTOM',
+              template: 'join_game',
+              cta: 'Join',
+              text: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+              text: {
+                default: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+                localizations: {
+                  mn_MN: `${FBInstant.player.getName()} хэрэглэгч таныг тоглоомонд урилаа. Орж тоглоомонд нэгдээрэй!`,
+                  en_US: `${FBInstant.player.getName()} user has invited you to Muushig. Come join in game!`,
+                },
+              },
+              image: contextBase64InviteImage,
+              data: {
+                inviteData: inviteData,
+                invite: true,
+              },
+            })
+              .then(function () {
+                console.log('Message was sent successfully');
+              })
+              .catch((err) => {
+                console.error(err);
+              });
+          });
       });
       const inButton = this.add
         .image(game.config.width / 1.25, game.config.height / 1.125, 'in')
