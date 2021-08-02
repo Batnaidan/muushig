@@ -18,6 +18,7 @@ FBInstant.initializeAsync().then(function () {
     isTurn: false,
     cards: [],
     skipCount: 0,
+    score: 15,
   };
   socket = io('http://localhost:3000', {
     query: {
