@@ -1,17 +1,18 @@
 let game,
-  playerCards = [], // Shuffled all cards
-  currentCards = [], // Player's cards
+  shuffledCards,
+  playerData,
+  playerCards, // Shuffled all cards
+  currentCards, // Player's cards
   selectedCards = [], // Player's selected cards
   me = {}, //
-  shuffledCards = null,
   stage = 'ready',
   inviteData = {},
-  socket;
-
+  socket,
+  playerIndex;
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
   me = {
-    uuid: FBInstant.player.getID(),
+    uuid: FBInstant.player.getID().toString(),
     name: FBInstant.player.getName(),
     photo: FBInstant.player.getPhoto(),
     ready: false,
@@ -22,20 +23,13 @@ FBInstant.initializeAsync().then(function () {
   };
   socket = io('http://localhost:3000', {
     query: {
-      uuid: FBInstant.player.getID(),
+      uuid: FBInstant.player.getID().toString(),
       name: FBInstant.player.getName(),
       photo: FBInstant.player.getPhoto(),
     },
   });
   socket.on('connect', function () {
     console.log('Connected!');
-  });
-  socket.on('roomId', function (data) {
-    inviteData.roomId = data._id;
-    console.log('Room', data._id + '\n' + JSON.stringify(data.room_players));
-  });
-  socket.on('playerChange', (room) => {
-    console.log(room);
   });
   let entryData = FBInstant.getEntryPointData();
   if (entryData) {
@@ -45,16 +39,13 @@ FBInstant.initializeAsync().then(function () {
   socket.on('deck', (deck) => {
     console.log(deck);
   });
-  socket.on('startGame', (room) => {
-    // room.room_players[]
-  });
 
   FBInstant.setLoadingProgress(100);
   FBInstant.startGameAsync().then(function () {
     var config = {
       type: Phaser.AUTO,
-      width: window.innerWidth * window.devicePixelRatio,
-      height: window.innerHeight * window.devicePixelRatio,
+      width: 1366 * window.devicePixelRatio,
+      height: 768 * window.devicePixelRatio,
       // pixelArt: true,
       scene: {
         preload: preload,
@@ -62,7 +53,12 @@ FBInstant.initializeAsync().then(function () {
         // update: update,
       },
     };
-
+    playerPicturePos = [
+      { x: 225, y: 375 },
+      { x: 510, y: 130 },
+      { x: 800, y: 130 },
+      { x: 1100, y: 375 },
+    ];
     game = new Phaser.Game(config);
     startGame();
     function preload() {
@@ -79,57 +75,96 @@ FBInstant.initializeAsync().then(function () {
         this.load.image(`${i}S`, `./assets/${i}S.png`);
       }
       this.load.image('backside', './assets/backside.jpg');
-      this.load.image('table', './assets/table.jpg');
+      this.load.image('table', './assets/shiree.png');
+      this.load.image('background', './assets/main_menu.jpg');
       this.load.image('drop', './assets/drop.png');
       this.load.image('dealerchange', './assets/dealerchange.png');
       this.load.image('in', './assets/in.png');
       this.load.image('change', './assets/change.png');
       this.load.image('put', './assets/put.png');
       this.load.image('playerPhoto', FBInstant.player.getPhoto());
+      this.load.image('lobby_create', './assets/lobby_create.png');
+      this.load.image('lobby_join', './assets/lobby_join.png');
+      this.load.image('invite_friends', './assets/invite_friends.png');
     }
 
     function create() {
-      this.add.image(0, 0, 'table').setOrigin(0, 0).setScale(0.4);
+      this.add.image(0, 0, 'background').setOrigin(0, 0);
+      socket.on('roomId', function (room) {
+        inviteData.roomId = room._id;
+      });
+      socket.on('playerChange', (room) => {
+        playerData = room.room_players;
+        const isMe = (element) => element.uuid == me.uuid;
+        playerIndex = room.room_players.findIndex(isMe);
+
+        for (let i = 0; i < playerData.length; i++) {
+          this.load.image(playerData[i].uuid, playerData[i].photo);
+        }
+        this.load.start();
+        this.load.once('complete', renderPlayers, this);
+        console.log(
+          'Room',
+          room._id + '\n' + JSON.stringify(room.room_players)
+        );
+        this.add.image(0, 0, 'table').setOrigin(0, 0);
+      });
+
+      socket.on('startGame', (room) => {
+        shuffledCards = room.room_deck;
+        console.log(playerIndex);
+        console.log(room.room_players);
+        playerCards = room.room_players[playerIndex].cards;
+        for (let i = 0; i < playerCards.length; i++) {
+          this.add
+            .image(
+              game.config.width / 2 - 200 + i * 100,
+              game.config.height / 1.25,
+              playerCards[i]
+            )
+            .setScale(0.25)
+            .setInteractive();
+        }
+      });
+
       var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
 
-      this.add.image(300, 300, 'playerPhoto').setScale(0.25);
-      const readyButton = this.add
-        .text(200, 300, 'READY', { fill: '#fff' })
-        .setInteractive();
-      readyButton.on('pointerdown', () => {
-        socket.emit('playerStateChange', true);
+      const joinLobbyButton = this.add
+        .image(game.config.width / 15, game.config.height / 2, 'lobby_join')
+        .setInteractive()
+        .setOrigin(null, 0);
+      joinLobbyButton.on('pointerup', () => {
+        joinLobbyButton.clearTint();
+        joinLobbyButton.setVisible(false);
+        createLobbyButton.setVisible(false);
+        inviteFriends.setVisible(true);
+        me.count = 5;
+        socket.emit('findRoom', me);
+      });
+      joinLobbyButton.on('pointerdown', () => {
+        joinLobbyButton.setTint(0x808080);
       });
       const createLobbyButton = this.add
-        .text(200, 200, 'CREATE LOBBY', { fill: '#fff' })
-        .setInteractive();
-      createLobbyButton.on('pointerdown', () => {
-        me.count = 2;
+        .image(game.config.width / 15, game.config.height / 1.5, 'lobby_create')
+        .setInteractive()
+        .setOrigin(null, 0);
+
+      createLobbyButton.on('pointerup', () => {
+        createLobbyButton.clearTint();
+        createLobbyButton.setVisible(false);
+        joinLobbyButton.setVisible(false);
+        inviteFriends.setVisible(true);
+        me.count = 1;
         socket.emit('findRoom', me);
-
-        // var connectedPlayers = FBInstant.player
-        //   .getConnectedPlayersAsync()
-        //   .then(function (players) {
-        //     console.log(
-        //       players.map(function (player) {
-        //         return {
-        //           id: player.getID(),
-        //           name: player.getName(),
-        //         };
-        //       })
-        //     );
-        //   });
-
-        // FBInstant.shareAsync({
-        //   intent: 'CHALLENGE',
-        //   image: `iVBORw0KGgoAAAANSUhEUgAAAAUA
-        //     AAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO
-        //         9TXL0Y4OHwAAAABJRU5ErkJggg==`,
-        //   text: 'hello',
-        // });
+      });
+      createLobbyButton.on('pointerdown', () => {
+        createLobbyButton.setTint(0x808080);
       });
       const inviteFriends = this.add
-        .text(200, 400, 'INVITE FRIENDS', { fill: '#fff' })
-        .setInteractive();
+        .image(game.config.width / 1.1, 50, 'invite_friends')
+        .setInteractive()
+        .setScale(0.5)
+        .setVisible(false);
       inviteFriends.on('pointerdown', () => {
         FBInstant.context
           .chooseAsync({
@@ -166,11 +201,13 @@ FBInstant.initializeAsync().then(function () {
       const inButton = this.add
         .image(game.config.width / 1.25, game.config.height / 1.125, 'in')
         .setScale(0.35)
-        .setInteractive();
+        .setInteractive()
+        .setVisible(false);
       const dropButton = this.add
         .image(game.config.width / 1.09, game.config.height / 1.125, 'drop')
         .setScale(0.35)
-        .setInteractive();
+        .setInteractive()
+        .setVisible(false);
       const changeButton = this.add
         .image(game.config.width / 1.09, game.config.height / 1.125, 'change')
         .setScale(0.35)
@@ -190,10 +227,11 @@ FBInstant.initializeAsync().then(function () {
       function onObjectClicked(pointer, gameObject) {
         let key = gameObject.texture.key;
         if (!key) return;
-        console.log(key);
 
+        console.log(key);
         let index = selectedCards.indexOf(gameObject.texture.key);
         if (index !== -1) {
+          gameObject.y += 20;
           selectedCards.splice(index, 1);
           postFxPlugin.remove(gameObject);
           // } else if (key === 'inviteFriends') {
@@ -215,19 +253,45 @@ FBInstant.initializeAsync().then(function () {
         } else if (key === 'dealerchange') {
           //send to server that player will change
         } else if (
-          key[key.length] === 'C' ||
-          key[key.length] === 'D' ||
-          key[key.length] === 'H' ||
-          key[key.length] === 'S'
+          key[key.length - 1] === 'C' ||
+          key[key.length - 1] === 'D' ||
+          key[key.length - 1] === 'H' ||
+          key[key.length - 1] === 'S'
         ) {
+          gameObject.y -= 20;
           selectedCards.push(key);
+          console.log(selectedCards);
           postFxPlugin.add(gameObject, {
             thickness: 3,
             outlineColor: 0xffa500,
           });
         }
       }
+      const renderPlayers = () => {
+        let j = 0;
+        for (let i = playerIndex + 1; i < playerData.length; i++) {
+          this.add
+            .image(
+              playerPicturePos[j].x,
+              playerPicturePos[j].y,
+              playerData[i].uuid
+            )
+            .setScale(0.3);
+          j++;
+        }
+        for (let i = 0; i < playerIndex; i++) {
+          this.add
+            .image(
+              playerPicturePos[j].x,
+              playerPicturePos[j].y,
+              playerData[i].uuid
+            )
+            .setScale(0.3);
+          j++;
+        }
+      };
     }
+    function update() {}
   });
 });
 
