@@ -8,7 +8,8 @@ let game,
   stage = 'ready',
   inviteData = {},
   socket,
-  playerIndex;
+  playerIndex,
+  playerCardGroup;
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
   me = {
@@ -115,18 +116,31 @@ FBInstant.initializeAsync().then(function () {
         console.log(playerIndex);
         console.log(room.room_players);
         playerCards = room.room_players[playerIndex].cards;
+        playerCardGroup = this.add.group();
         for (let i = 0; i < playerCards.length; i++) {
-          this.add
-            .image(
-              game.config.width / 2 - 200 + i * 100,
-              game.config.height / 1.25,
-              playerCards[i]
-            )
-            .setScale(0.25)
-            .setInteractive();
+          playerCardGroup.add(
+            this.add
+              .image(
+                game.config.width / 2 - 200 + i * 100,
+                game.config.height / 1.25,
+                playerCards[i]
+              )
+              .setScale(0.25)
+              .setInteractive()
+          );
         }
+        changeButton.setVisible(true);
       });
-
+      socket.on('dropCards', (room) => {
+        room.room_players[playerIndex].cards.forEach((element, i) => {
+          playerCardGroup.add(
+            this.add
+              .image(i * 20, i * 50, element)
+              .setScale(0.25)
+              .setInteractive()
+          );
+        });
+      });
       var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
 
       const joinLobbyButton = this.add
@@ -200,17 +214,17 @@ FBInstant.initializeAsync().then(function () {
       });
       const inButton = this.add
         .image(game.config.width / 1.25, game.config.height / 1.125, 'in')
-        .setScale(0.35)
+        .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       const dropButton = this.add
         .image(game.config.width / 1.09, game.config.height / 1.125, 'drop')
-        .setScale(0.35)
+        .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       const changeButton = this.add
         .image(game.config.width / 1.09, game.config.height / 1.125, 'change')
-        .setScale(0.35)
+        .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       const dealerChangeButton = this.add
@@ -219,7 +233,7 @@ FBInstant.initializeAsync().then(function () {
           game.config.height / 1.125,
           'dealerchange'
         )
-        .setScale(0.35)
+        .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       this.input.on('gameobjectdown', onObjectClicked);
@@ -247,9 +261,17 @@ FBInstant.initializeAsync().then(function () {
           dropButton.setVisible(false);
           inButton.setVisible(false);
           stage = 'change';
-          changeButton.setVisible(true);
         } else if (key === 'change') {
           //send to server that player will change
+          socket.emit('dropCards', selectedCards);
+          console.log(playerCardGroup);
+          playerCardGroup.children.entries.forEach((element1) => {
+            selectedCards.forEach((element2) => {
+              if (element1.texture.key == element2) {
+                element1.destroy();
+              }
+            });
+          });
         } else if (key === 'dealerchange') {
           //send to server that player will change
         } else if (
