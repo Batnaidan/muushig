@@ -1,15 +1,14 @@
 let game,
-  shuffledCards,
   playerData,
   playerCards, // Shuffled all cards
   currentCards, // Player's cards
   selectedCards = [], // Player's selected cards
   me = {}, //
-  stage = 'ready',
   inviteData = {},
   socket,
   playerIndex,
-  playerCardGroup;
+  playerCardGroup,
+  rootCardCount;
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
   me = {
@@ -17,7 +16,6 @@ FBInstant.initializeAsync().then(function () {
     name: FBInstant.player.getName(),
     photo: FBInstant.player.getPhoto(),
     ready: false,
-    isTurn: false,
     cards: [],
     skipCount: 0,
     score: 15,
@@ -63,6 +61,11 @@ FBInstant.initializeAsync().then(function () {
     game = new Phaser.Game(config);
     startGame();
     function preload() {
+      this.load.bitmapFont(
+        'atari',
+        './assets/gothic.png',
+        './assets/gothic.xml'
+      );
       this.load.plugin(
         'rexoutlinepipelineplugin',
         'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexoutlinepipelineplugin.min.js',
@@ -77,7 +80,9 @@ FBInstant.initializeAsync().then(function () {
       }
       this.load.image('backside', './assets/backside.jpg');
       this.load.image('table', './assets/shiree.png');
-      this.load.image('background', './assets/main_menu.jpg');
+      this.load.image('background', './assets/background.png');
+      this.load.image('logo', './assets/logo.png');
+      this.load.image('graphic', './assets/graphic.png');
       this.load.image('drop', './assets/drop.png');
       this.load.image('dealerchange', './assets/dealerchange.png');
       this.load.image('in', './assets/in.png');
@@ -90,7 +95,16 @@ FBInstant.initializeAsync().then(function () {
     }
 
     function create() {
-      this.add.image(0, 0, 'background').setOrigin(0, 0);
+      const background = this.add.image(0, 0, 'background').setOrigin(0, 0);
+      const monster = this.add.image(
+        (game.config.width / 4) * 3,
+        game.config.height / 2,
+        'graphic'
+      );
+      const logo = this.add
+        .image(game.config.width / 12, game.config.height / 8, 'logo')
+        .setScale(0.2);
+
       socket.on('roomId', function (room) {
         inviteData.roomId = room._id;
       });
@@ -108,13 +122,27 @@ FBInstant.initializeAsync().then(function () {
           'Room',
           room._id + '\n' + JSON.stringify(room.room_players)
         );
+        monster.setVisible(false);
         this.add.image(0, 0, 'table').setOrigin(0, 0);
       });
-
       socket.on('startGame', (room) => {
-        shuffledCards = room.room_deck;
-        console.log(playerIndex);
         console.log(room.room_players);
+        this.add
+          .image(
+            game.config.width / 2 - 30,
+            game.config.height / 3.125,
+            room.room_specialCard
+          )
+          .setScale(0.25);
+        rootCardCount = this.add
+          .bitmapText(
+            game.config.width / 2 + 30,
+            game.config.height / 3.125 - 20,
+            'atari',
+            room.room_deck.length,
+            40
+          )
+          .setTint(0xffffff);
         playerCards = room.room_players[playerIndex].cards;
         playerCardGroup = this.add.group();
         for (let i = 0; i < playerCards.length; i++) {
@@ -129,13 +157,39 @@ FBInstant.initializeAsync().then(function () {
               .setInteractive()
           );
         }
-        changeButton.setVisible(true);
+        if (room.room_turn == me.uuid && room.room_stage == 'ready') {
+          dropButton.setVisible(true);
+          inButton.setVisible(true);
+          // changeButton.setVisible(true);
+        }
       });
-      socket.on('dropCards', (room) => {
+      socket.on('changeReady', (room) => {
+        if (room.room_turn == me.uuid && room.room_stage == 'ready') {
+          dropButton.setVisible(true);
+          inButton.setVisible(true);
+        } else if (room.room_turn == me.uuid && room.room_stage == 'change') {
+          changeButton.setVisible(true);
+        }
+        // room.room_players.forEach((players, i) => {
+        // });
+      });
+      socket.on('changeCards', (room) => {
+        console.log(room.room_players);
+        if (room.room_turn == me.uuid && room.room_stage == 'change') {
+          changeButton.setVisible(true);
+        } else if (room.room_turn == me.uuid && room.room_stage == 'put') {
+          putButton.setVisible(true);
+        }
+        rootCardCount.setText(room.room_deck.length);
+        playerCardGroup.clear(true);
         room.room_players[playerIndex].cards.forEach((element, i) => {
           playerCardGroup.add(
             this.add
-              .image(i * 20, i * 50, element)
+              .image(
+                game.config.width / 2 - 200 + i * 100,
+                game.config.height / 1.25,
+                element
+              )
               .setScale(0.25)
               .setInteractive()
           );
@@ -213,26 +267,31 @@ FBInstant.initializeAsync().then(function () {
           });
       });
       const inButton = this.add
-        .image(game.config.width / 1.25, game.config.height / 1.125, 'in')
+        .image(game.config.width / 1.3, game.config.height / 1.125, 'in')
         .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       const dropButton = this.add
-        .image(game.config.width / 1.09, game.config.height / 1.125, 'drop')
+        .image(game.config.width / 1.1, game.config.height / 1.125, 'drop')
         .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       const changeButton = this.add
-        .image(game.config.width / 1.09, game.config.height / 1.125, 'change')
+        .image(game.config.width / 1.1, game.config.height / 1.125, 'change')
         .setScale(0.7)
         .setInteractive()
         .setVisible(false);
       const dealerChangeButton = this.add
         .image(
-          game.config.width / 1.09,
+          game.config.width / 1.1,
           game.config.height / 1.125,
           'dealerchange'
         )
+        .setScale(0.7)
+        .setInteractive()
+        .setVisible(false);
+      const putButton = this.add
+        .image(game.config.width / 1.09, game.config.height / 1.125, 'put')
         .setScale(0.7)
         .setInteractive()
         .setVisible(false);
@@ -242,7 +301,6 @@ FBInstant.initializeAsync().then(function () {
         let key = gameObject.texture.key;
         if (!key) return;
 
-        console.log(key);
         let index = selectedCards.indexOf(gameObject.texture.key);
         if (index !== -1) {
           gameObject.y += 20;
@@ -254,26 +312,30 @@ FBInstant.initializeAsync().then(function () {
           skipCount = 0;
           dropButton.setVisible(false);
           inButton.setVisible(false);
-          changeButton.setVisible(true);
-          stage = 'change';
+          socket.emit('changeReady', true);
         } else if (key === 'drop') {
           //send to server that player is in and increment skipCount to 0
           dropButton.setVisible(false);
           inButton.setVisible(false);
-          stage = 'change';
+          socket.emit('changeReady', false);
         } else if (key === 'change') {
           //send to server that player will change
-          socket.emit('dropCards', selectedCards);
-          console.log(playerCardGroup);
-          playerCardGroup.children.entries.forEach((element1) => {
-            selectedCards.forEach((element2) => {
-              if (element1.texture.key == element2) {
-                element1.destroy();
-              }
+          if (selectedCards.length <= Number(rootCardCount.text)) {
+            changeButton.setVisible(false);
+            console.log(selectedCards);
+            socket.emit('changeCards', selectedCards);
+            console.log(playerCardGroup.children.entries);
+            playerCardGroup.children.entries.forEach((element1) => {
+              selectedCards.forEach((element2) => {
+                if (element1.texture.key == element2) {
+                  element1.destroy();
+                }
+              });
             });
-          });
+          }
         } else if (key === 'dealerchange') {
           //send to server that player will change
+        } else if (key === 'put') {
         } else if (
           key[key.length - 1] === 'C' ||
           key[key.length - 1] === 'D' ||
