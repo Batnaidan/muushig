@@ -8,6 +8,7 @@ let game,
   socket,
   playerIndex,
   playerCardGroup,
+  currentCardGroup,
   rootCardCount;
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
@@ -105,6 +106,8 @@ FBInstant.initializeAsync().then(function () {
         .image(game.config.width / 12, game.config.height / 8, 'logo')
         .setScale(0.2);
 
+      var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
+
       socket.on('roomId', function (room) {
         inviteData.roomId = room._id;
       });
@@ -143,20 +146,26 @@ FBInstant.initializeAsync().then(function () {
             40
           )
           .setTint(0xffffff);
-        playerCards = room.room_players[playerIndex].cards;
         playerCardGroup = this.add.group();
-        for (let i = 0; i < playerCards.length; i++) {
-          playerCardGroup.add(
-            this.add
-              .image(
-                game.config.width / 2 - 200 + i * 100,
-                game.config.height / 1.25,
-                playerCards[i]
-              )
-              .setScale(0.25)
-              .setInteractive()
-          );
-        }
+        currentCardGroup = this.add.group();
+
+        room.room_players[playerIndex].cards.forEach((element, i) => {
+          let cardObject = this.add
+            .image(
+              game.config.width / 2 - 200 + i * 100,
+              game.config.height / 1.25,
+              element
+            )
+            .setScale(0.25)
+            .setInteractive()
+            .on('pointerover', () => {
+              if (selectedCards.indexOf(element) == -1) cardObject.y -= 20;
+            })
+            .on('pointerout', () => {
+              if (selectedCards.indexOf(element) == -1) cardObject.y += 20;
+            });
+          playerCardGroup.add(cardObject);
+        });
         if (room.room_turn == me.uuid && room.room_stage == 'ready') {
           dropButton.setVisible(true);
           inButton.setVisible(true);
@@ -174,6 +183,7 @@ FBInstant.initializeAsync().then(function () {
         // });
       });
       socket.on('changeCards', (room) => {
+        selectedCards = [];
         console.log(room.room_players);
         if (room.room_turn == me.uuid && room.room_stage == 'change') {
           changeButton.setVisible(true);
@@ -183,20 +193,88 @@ FBInstant.initializeAsync().then(function () {
         rootCardCount.setText(room.room_deck.length);
         playerCardGroup.clear(true);
         room.room_players[playerIndex].cards.forEach((element, i) => {
-          playerCardGroup.add(
+          let cardObject = this.add
+            .image(
+              game.config.width / 2 - 200 + i * 100,
+              game.config.height / 1.25,
+              element
+            )
+            .setScale(0.25)
+            .setInteractive()
+            .on('pointerover', () => {
+              if (selectedCards.indexOf(element) == -1) cardObject.y -= 20;
+            })
+            .on('pointerout', () => {
+              if (selectedCards.indexOf(element) == -1) cardObject.y += 20;
+            });
+          playerCardGroup.add(cardObject);
+        });
+      });
+      socket.on('putCards', (room) => {
+        selectedCards = [];
+        console.log(room);
+        if (room.room_turn == me.uuid && room.room_stage == 'put') {
+          putButton.setVisible(true);
+        }
+        playerCardGroup.clear(true);
+        room.room_players[playerIndex].cards.forEach((element, i) => {
+          let cardObject = this.add
+            .image(
+              game.config.width / 2 - 200 + i * 100,
+              game.config.height / 1.25,
+              element
+            )
+            .setScale(0.25)
+            .setInteractive()
+            .on('pointerover', () => {
+              cardObject.y -= 20;
+            })
+            .on('pointerout', () => {
+              cardObject.y += 20;
+            });
+          playerCardGroup.add(cardObject);
+        });
+        currentCardGroup.clear(true);
+        room.room_currentCards.forEach((element, i) => {
+          currentCardGroup.add(
             this.add
               .image(
-                game.config.width / 2 - 200 + i * 100,
-                game.config.height / 1.25,
+                game.config.width / 2 -
+                  (room.room_currentCards.length - 1) * 10 +
+                  i * 20,
+                game.config.height / 2,
                 element
               )
               .setScale(0.25)
-              .setInteractive()
           );
         });
       });
-      var postFxPlugin = this.plugins.get('rexoutlinepipelineplugin');
-
+      socket.on('roundOver', (room) => {
+        selectedCards = [];
+        console.log(room);
+        if (room.room_turn == me.uuid && room.room_stage == 'put') {
+          putButton.setVisible(true);
+        }
+        playerCardGroup.clear(true);
+        room.room_players[playerIndex].cards.forEach((element, i) => {
+          let cardObject = this.add
+            .image(
+              game.config.width / 2 - 200 + i * 100,
+              game.config.height / 1.25,
+              element
+            )
+            .setScale(0.25)
+            .setInteractive()
+            .on('pointerover', () => {
+              cardObject.y -= 20;
+            })
+            .on('pointerout', () => {
+              cardObject.y += 20;
+            });
+          playerCardGroup.add(cardObject);
+        });
+        currentCardGroup.clear(true);
+      });
       const joinLobbyButton = this.add
         .image(game.config.width / 15, game.config.height / 2, 'lobby_join')
         .setInteractive()
@@ -268,17 +346,17 @@ FBInstant.initializeAsync().then(function () {
       });
       const inButton = this.add
         .image(game.config.width / 1.3, game.config.height / 1.125, 'in')
-        .setScale(0.7)
+        .setScale(0.5)
         .setInteractive()
         .setVisible(false);
       const dropButton = this.add
         .image(game.config.width / 1.1, game.config.height / 1.125, 'drop')
-        .setScale(0.7)
+        .setScale(0.5)
         .setInteractive()
         .setVisible(false);
       const changeButton = this.add
         .image(game.config.width / 1.1, game.config.height / 1.125, 'change')
-        .setScale(0.7)
+        .setScale(0.5)
         .setInteractive()
         .setVisible(false);
       const dealerChangeButton = this.add
@@ -303,7 +381,6 @@ FBInstant.initializeAsync().then(function () {
 
         let index = selectedCards.indexOf(gameObject.texture.key);
         if (index !== -1) {
-          gameObject.y += 20;
           selectedCards.splice(index, 1);
           postFxPlugin.remove(gameObject);
           // } else if (key === 'inviteFriends') {
@@ -315,9 +392,10 @@ FBInstant.initializeAsync().then(function () {
           socket.emit('changeReady', true);
         } else if (key === 'drop') {
           //send to server that player is in and increment skipCount to 0
+          playerCardGroup.clear(true);
           dropButton.setVisible(false);
           inButton.setVisible(false);
-          socket.emit('changeReady', false);
+          if (me.skipCount <= 3) socket.emit('changeReady', false);
         } else if (key === 'change') {
           //send to server that player will change
           if (selectedCards.length <= Number(rootCardCount.text)) {
@@ -336,13 +414,16 @@ FBInstant.initializeAsync().then(function () {
         } else if (key === 'dealerchange') {
           //send to server that player will change
         } else if (key === 'put') {
+          if (selectedCards.length == 1) {
+            putButton.setVisible(false);
+            socket.emit('putCards', selectedCards[0]);
+          }
         } else if (
           key[key.length - 1] === 'C' ||
           key[key.length - 1] === 'D' ||
           key[key.length - 1] === 'H' ||
           key[key.length - 1] === 'S'
         ) {
-          gameObject.y -= 20;
           selectedCards.push(key);
           console.log(selectedCards);
           postFxPlugin.add(gameObject, {
