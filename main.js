@@ -1,7 +1,7 @@
 let game,
   playerData,
-  playerCards, // Shuffled all cards
   currentCards, // Player's cards
+  playerCards,
   selectedCards = [], // Player's selected cards
   me = {}, //
   inviteData = {},
@@ -9,7 +9,8 @@ let game,
   playerIndex,
   playerCardGroup,
   currentCardGroup,
-  rootCardCount;
+  rootCardCount,
+  specialCardType;
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
   me = {
@@ -113,8 +114,6 @@ FBInstant.initializeAsync().then(function () {
       });
       socket.on('playerChange', (room) => {
         playerData = room.room_players;
-        const isMe = (element) => element.uuid == me.uuid;
-        playerIndex = room.room_players.findIndex(isMe);
 
         for (let i = 0; i < playerData.length; i++) {
           this.load.image(playerData[i].uuid, playerData[i].photo);
@@ -129,6 +128,8 @@ FBInstant.initializeAsync().then(function () {
         this.add.image(0, 0, 'table').setOrigin(0, 0);
       });
       socket.on('startGame', (room) => {
+        const isMe = (element) => element.uuid == me.uuid;
+        playerIndex = room.room_players.findIndex(isMe);
         console.log(room.room_players);
         this.add
           .image(
@@ -146,13 +147,15 @@ FBInstant.initializeAsync().then(function () {
             40
           )
           .setTint(0xffffff);
+        specialCardType =
+          room.room_specialCard[room.room_specialCard.length - 1];
         playerCardGroup = this.add.group();
         currentCardGroup = this.add.group();
-
-        room.room_players[playerIndex].cards.forEach((element, i) => {
+        playerScoreGroup = this.add.group();
+        room.room_players[playerIndex].cards.forEach((element, i, cards) => {
           let cardObject = this.add
             .image(
-              game.config.width / 2 - 200 + i * 100,
+              game.config.width / 2 - cards.length * 40 + i * 100,
               game.config.height / 1.25,
               element
             )
@@ -166,10 +169,32 @@ FBInstant.initializeAsync().then(function () {
             });
           playerCardGroup.add(cardObject);
         });
+        let j = 0;
+        for (let i = playerIndex + 1; i < room.room_players.length; i++) {
+          let scoreObject = this.add.bitmapText(
+            playerPicturePos[j].x - 10,
+            playerPicturePos[j].y + 60,
+            'atari',
+            room.room_players[i].score,
+            20
+          );
+          playerScoreGroup.add(scoreObject);
+          j++;
+        }
+        for (let i = 0; i < playerIndex; i++) {
+          let scoreObject = this.add.bitmapText(
+            playerPicturePos[j].x - 10,
+            playerPicturePos[j].y + 60,
+            'atari',
+            room.room_players[i].score,
+            20
+          );
+          playerScoreGroup.add(scoreObject);
+          j++;
+        }
         if (room.room_turn == me.uuid && room.room_stage == 'ready') {
           dropButton.setVisible(true);
           inButton.setVisible(true);
-          // changeButton.setVisible(true);
         }
       });
       socket.on('changeReady', (room) => {
@@ -183,19 +208,24 @@ FBInstant.initializeAsync().then(function () {
         // });
       });
       socket.on('changeCards', (room) => {
-        selectedCards = [];
         console.log(room.room_players);
         if (room.room_turn == me.uuid && room.room_stage == 'change') {
           changeButton.setVisible(true);
         } else if (room.room_turn == me.uuid && room.room_stage == 'put') {
           putButton.setVisible(true);
+        } else if (
+          room.room_turn == me.uuid &&
+          room.room_stage == 'changeDealerCard'
+        ) {
+          dealerChangeButton.setVisible(true);
         }
+        playerCards = room.room_players[playerIndex].cards;
         rootCardCount.setText(room.room_deck.length);
         playerCardGroup.clear(true);
-        room.room_players[playerIndex].cards.forEach((element, i) => {
+        room.room_players[playerIndex].cards.forEach((element, i, cards) => {
           let cardObject = this.add
             .image(
-              game.config.width / 2 - 200 + i * 100,
+              game.config.width / 2 - cards.length * 40 + i * 100,
               game.config.height / 1.25,
               element
             )
@@ -211,26 +241,27 @@ FBInstant.initializeAsync().then(function () {
         });
       });
       socket.on('putCards', (room) => {
-        selectedCards = [];
         console.log(room);
         if (room.room_turn == me.uuid && room.room_stage == 'put') {
           putButton.setVisible(true);
         }
+        playerCards = room.room_players[playerIndex].cards;
+        currentCards = room.room_currentCards;
         playerCardGroup.clear(true);
-        room.room_players[playerIndex].cards.forEach((element, i) => {
+        room.room_players[playerIndex].cards.forEach((element, i, cards) => {
           let cardObject = this.add
             .image(
-              game.config.width / 2 - 200 + i * 100,
+              game.config.width / 2 - cards.length * 40 + i * 100,
               game.config.height / 1.25,
               element
             )
             .setScale(0.25)
             .setInteractive()
             .on('pointerover', () => {
-              cardObject.y -= 20;
+              if (selectedCards.indexOf(element) == -1) cardObject.y -= 20;
             })
             .on('pointerout', () => {
-              cardObject.y += 20;
+              if (selectedCards.indexOf(element) == -1) cardObject.y += 20;
             });
           playerCardGroup.add(cardObject);
         });
@@ -248,32 +279,98 @@ FBInstant.initializeAsync().then(function () {
               .setScale(0.25)
           );
         });
+
+        playerScoreGroup.clear(true);
+        let j = 0;
+        for (let i = playerIndex + 1; i < room.room_players.length; i++) {
+          let scoreObject = this.add.bitmapText(
+            playerPicturePos[j].x - 10,
+            playerPicturePos[j].y + 60,
+            'atari',
+            room.room_players[i].score,
+            20
+          );
+          playerScoreGroup.add(scoreObject);
+          j++;
+        }
+        for (let i = 0; i < playerIndex; i++) {
+          let scoreObject = this.add.bitmapText(
+            playerPicturePos[j].x - 10,
+            playerPicturePos[j].y + 60,
+            'atari',
+            room.room_players[i].score,
+            20
+          );
+          playerScoreGroup.add(scoreObject);
+          j++;
+        }
       });
       socket.on('roundOver', (room) => {
-        selectedCards = [];
         console.log(room);
         if (room.room_turn == me.uuid && room.room_stage == 'put') {
           putButton.setVisible(true);
         }
+        playerCards = room.room_players[playerIndex].cards;
+        currentCards = room.room_currentCards;
+        selectedCards = [];
         playerCardGroup.clear(true);
-        room.room_players[playerIndex].cards.forEach((element, i) => {
+        room.room_players[playerIndex].cards.forEach((element, i, cards) => {
           let cardObject = this.add
             .image(
-              game.config.width / 2 - 200 + i * 100,
+              game.config.width / 2 - cards.length * 40 + i * 100,
               game.config.height / 1.25,
               element
             )
             .setScale(0.25)
             .setInteractive()
             .on('pointerover', () => {
-              cardObject.y -= 20;
+              if (selectedCards.indexOf(element) == -1) cardObject.y -= 20;
             })
             .on('pointerout', () => {
-              cardObject.y += 20;
+              if (selectedCards.indexOf(element) == -1) cardObject.y += 20;
             });
           playerCardGroup.add(cardObject);
         });
         currentCardGroup.clear(true);
+        room.room_prevCards.forEach((element, i, cards) => {
+          currentCardGroup.add(
+            this.add
+              .image(
+                game.config.width / 2 - (cards - 1) * 10 + i * 20,
+                game.config.height / 2,
+                element
+              )
+              .setScale(0.25)
+          );
+        });
+        setTimeout(() => {
+          currentCardGroup.clear(true);
+        }, 1500);
+
+        playerScoreGroup.clear(true);
+        let j = 0;
+        for (let i = playerIndex + 1; i < room.room_players.length; i++) {
+          let scoreObject = this.add.bitmapText(
+            playerPicturePos[j].x - 10,
+            playerPicturePos[j].y + 60,
+            'atari',
+            room.room_players[i].score,
+            20
+          );
+          playerScoreGroup.add(scoreObject);
+          j++;
+        }
+        for (let i = 0; i < playerIndex; i++) {
+          let scoreObject = this.add.bitmapText(
+            playerPicturePos[j].x - 10,
+            playerPicturePos[j].y + 60,
+            'atari',
+            room.room_players[i].score,
+            20
+          );
+          playerScoreGroup.add(scoreObject);
+          j++;
+        }
       });
       const joinLobbyButton = this.add
         .image(game.config.width / 15, game.config.height / 2, 'lobby_join')
@@ -397,12 +494,9 @@ FBInstant.initializeAsync().then(function () {
           inButton.setVisible(false);
           if (me.skipCount <= 3) socket.emit('changeReady', false);
         } else if (key === 'change') {
-          //send to server that player will change
           if (selectedCards.length <= Number(rootCardCount.text)) {
             changeButton.setVisible(false);
-            console.log(selectedCards);
             socket.emit('changeCards', selectedCards);
-            console.log(playerCardGroup.children.entries);
             playerCardGroup.children.entries.forEach((element1) => {
               selectedCards.forEach((element2) => {
                 if (element1.texture.key == element2) {
@@ -410,13 +504,33 @@ FBInstant.initializeAsync().then(function () {
                 }
               });
             });
+            selectedCards = [];
           }
         } else if (key === 'dealerchange') {
-          //send to server that player will change
+          if (selectedCards.length == 1) {
+            dealerChangeButton.setVisible(false);
+            socket.emit('changeDealerCard', selectedCards);
+            playerCardGroup.children.entries.forEach((element) => {
+              if (element.texture.key == selectedCards[0]) {
+                element.destroy();
+              }
+            });
+            selectedCards = [];
+          }
         } else if (key === 'put') {
           if (selectedCards.length == 1) {
             putButton.setVisible(false);
-            socket.emit('putCards', selectedCards[0]);
+            let cardIndex = findCardIndex(
+              playerCards,
+              currentCards,
+              selectedCards[0]
+            );
+
+            socket.emit('putCards', {
+              card: selectedCards[0],
+              index: cardIndex,
+            });
+            selectedCards = [];
           }
         } else if (
           key[key.length - 1] === 'C' ||
@@ -432,8 +546,48 @@ FBInstant.initializeAsync().then(function () {
           });
         }
       }
+
+      function findCardIndex(playerCards, currentPlayCards, selectedCard) {
+        let card = selectedCard;
+        let putCardType = selectedCard[selectedCard.length - 1];
+        let putCardRank = parseInt(
+          selectedCard.slice(0, selectedCard.length - 1)
+        );
+        let firstCardType = findFirstTypeIndex(
+          currentPlayCards,
+          specialCardType
+        );
+        let firstCard = currentPlayCards[firstCardIndex];
+        playerCards.forEach((card, i, cards) => {
+          let elementCard = card;
+          let currentCardType = elementCard[elementCard.length - 1];
+          // let currentCardRank = parseInt(
+          //   elementCard.slice(0, elementCard.length - 1)
+          // );
+          // let firstCardRank = parseInt(
+          //   firstCard.slice(0, firstCard.length - 1)
+          // );
+          if (firstCardType == currentCardType) {
+            return true;
+          }
+        });
+        return false;
+      }
+
+      function findFirstCard(cards, specialCardType) {
+        for (i = cards.length - 1; i >= 0; i--) {
+          let currentCardType = cards[i][cards[i].length - 1];
+          if (currentCardType != specialCardType) {
+            return currentCardType;
+          }
+        }
+        return false;
+      }
       const renderPlayers = () => {
+        const isMe = (element) => element.uuid == me.uuid;
+        playerIndex = playerData.findIndex(isMe);
         let j = 0;
+        console.log(playerIndex);
         for (let i = playerIndex + 1; i < playerData.length; i++) {
           this.add
             .image(
