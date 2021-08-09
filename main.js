@@ -1,6 +1,6 @@
 let game,
   playerData,
-  currentCards, // Player's cards
+  currentCards = [], // Player's cards
   playerCards,
   selectedCards = [], // Player's selected cards
   me = {}, //
@@ -13,6 +13,7 @@ let game,
   specialCardType;
 const responseTime = 15;
 FBInstant.initializeAsync().then(function () {
+  console.log('100');
   me = {
     uuid: FBInstant.player.getID().toString(),
     name: FBInstant.player.getName(),
@@ -130,7 +131,6 @@ FBInstant.initializeAsync().then(function () {
       socket.on('startGame', (room) => {
         const isMe = (element) => element.uuid == me.uuid;
         playerIndex = room.room_players.findIndex(isMe);
-        console.log(room.room_players);
         this.add
           .image(
             game.config.width / 2 - 30,
@@ -306,7 +306,6 @@ FBInstant.initializeAsync().then(function () {
         }
       });
       socket.on('roundOver', (room) => {
-        console.log(room);
         if (room.room_turn == me.uuid && room.room_stage == 'put') {
           putButton.setVisible(true);
         }
@@ -332,6 +331,7 @@ FBInstant.initializeAsync().then(function () {
           playerCardGroup.add(cardObject);
         });
         currentCardGroup.clear(true);
+
         room.room_prevCards.forEach((element, i, cards) => {
           currentCardGroup.add(
             this.add
@@ -343,9 +343,19 @@ FBInstant.initializeAsync().then(function () {
               .setScale(0.25)
           );
         });
-        setTimeout(() => {
-          currentCardGroup.clear(true);
-        }, 1500);
+        // this.time.delayedCall(10, addCurrentAdd, [], this);
+        // function addCurrentAdd() {
+        // }
+        // let timedEvent = this.time.addEvent({
+        //   delay: 1500,
+        //   callback: clearCurrentCard,
+        //   callbackScope: this,
+        // });
+        // // this.time.delayedCall(1000, clearCurrentCard, [], this);
+        // function clearCurrentCard() {
+        //   currentCardGroup.clear(true);
+        //   console.log('clear');
+        // }
 
         playerScoreGroup.clear(true);
         let j = 0;
@@ -371,6 +381,26 @@ FBInstant.initializeAsync().then(function () {
           playerScoreGroup.add(scoreObject);
           j++;
         }
+      });
+      socket.on('matchEnd', (room) => {
+        let winner = room.room_players[0].uuid;
+        let winnerScore = room.room_players[0].score;
+        room.room_players.forEach((player, i) => {
+          if (winnerScore > player.score) {
+            winner = player.uuid;
+            winnerScore = player.score;
+          }
+        });
+        if (winner == me.uuid) {
+          this.add.bitmapText(
+            game.config.width - 50,
+            game.config.height,
+            'atari',
+            "CONGRATS YOU'VE WON",
+            100
+          );
+        }
+        console.log('match ended');
       });
       const joinLobbyButton = this.add
         .image(game.config.width / 15, game.config.height / 2, 'lobby_join')
@@ -519,18 +549,33 @@ FBInstant.initializeAsync().then(function () {
           }
         } else if (key === 'put') {
           if (selectedCards.length == 1) {
-            putButton.setVisible(false);
-            let cardIndex = findCardIndex(
-              playerCards,
+            let firstCardType = findFirstTypeIndex(
               currentCards,
-              selectedCards[0]
+              specialCardType
             );
-
-            socket.emit('putCards', {
-              card: selectedCards[0],
-              index: cardIndex,
+            let hasCard = false;
+            playerCards.forEach((playerCard) => {
+              let putCardType = playerCard[playerCard.length - 1];
+              if (
+                putCardType == firstCardType ||
+                putCardType == specialCardType
+              ) {
+                hasCard = true;
+              }
             });
-            selectedCards = [];
+            if (
+              (hasCard == true &&
+                (firstCardType ==
+                  selectedCards[0][selectedCards[0].length - 1] ||
+                  specialCardType ==
+                    selectedCards[0][selectedCards[0].length - 1])) ||
+              hasCard == false ||
+              currentCards.length == 0
+            ) {
+              putButton.setVisible(false);
+              socket.emit('putCards', selectedCards[0]);
+              selectedCards = [];
+            }
           }
         } else if (
           key[key.length - 1] === 'C' ||
@@ -539,55 +584,25 @@ FBInstant.initializeAsync().then(function () {
           key[key.length - 1] === 'S'
         ) {
           selectedCards.push(key);
-          console.log(selectedCards);
           postFxPlugin.add(gameObject, {
             thickness: 3,
             outlineColor: 0xffa500,
           });
         }
       }
-
-      function findCardIndex(playerCards, currentPlayCards, selectedCard) {
-        let card = selectedCard;
-        let putCardType = selectedCard[selectedCard.length - 1];
-        let putCardRank = parseInt(
-          selectedCard.slice(0, selectedCard.length - 1)
-        );
-        let firstCardType = findFirstTypeIndex(
-          currentPlayCards,
-          specialCardType
-        );
-        let firstCard = currentPlayCards[firstCardIndex];
-        playerCards.forEach((card, i, cards) => {
-          let elementCard = card;
-          let currentCardType = elementCard[elementCard.length - 1];
-          // let currentCardRank = parseInt(
-          //   elementCard.slice(0, elementCard.length - 1)
-          // );
-          // let firstCardRank = parseInt(
-          //   firstCard.slice(0, firstCard.length - 1)
-          // );
-          if (firstCardType == currentCardType) {
-            return true;
-          }
-        });
-        return false;
-      }
-
-      function findFirstCard(cards, specialCardType) {
+      function findFirstTypeIndex(cards, specialCardType) {
         for (i = cards.length - 1; i >= 0; i--) {
           let currentCardType = cards[i][cards[i].length - 1];
           if (currentCardType != specialCardType) {
             return currentCardType;
           }
         }
-        return false;
+        return specialCardType;
       }
       const renderPlayers = () => {
         const isMe = (element) => element.uuid == me.uuid;
         playerIndex = playerData.findIndex(isMe);
         let j = 0;
-        console.log(playerIndex);
         for (let i = playerIndex + 1; i < playerData.length; i++) {
           this.add
             .image(
